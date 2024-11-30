@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">hatethis</string>
+    <string name="default_web_client_id">"334028209671-jpqua8hgbe6g8nc61vjeqlbbpcev6gpc.apps.googleusercontent.com"</string>
+    <string name="sign_in_with_google">Sign In with Google</string>
+</resources>
