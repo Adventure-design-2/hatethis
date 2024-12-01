@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package com.example.hatethis.ui.login
 
 import android.widget.Toast
@@ -28,7 +30,8 @@ import com.google.android.gms.common.api.ApiException
 fun LoginScreen(
     viewModel: AuthViewModel,
     onLoginSuccess: () -> Unit,
-    onNavigateToRegister: () -> Unit
+    onNavigateToRegister: () -> Unit,
+    onNavigateToInvite: () -> Unit
 ) {
     val context = LocalContext.current
     var email by remember { mutableStateOf("") }
@@ -144,6 +147,16 @@ fun LoginScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("회원가입")
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // 초대 코드 입력 버튼
+        Button(
+            onClick = { onNavigateToInvite() },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("초대 코드 입력")
         }
     }
 }

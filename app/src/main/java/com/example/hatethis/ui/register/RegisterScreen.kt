@@ -1,16 +1,16 @@
 package com.example.hatethis.ui.register
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.material3.OutlinedTextField
-import android.widget.Toast
-import androidx.compose.ui.platform.LocalContext
 import com.example.hatethis.viewmodel.AuthViewModel
 
 @Composable
@@ -34,6 +34,7 @@ fun RegisterScreen(
     ) {
         Text(text = "회원가입", modifier = Modifier.padding(bottom = 16.dp))
 
+        // 이메일 입력 필드
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
@@ -43,6 +44,7 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // 비밀번호 입력 필드
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
@@ -53,6 +55,7 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // 비밀번호 확인 입력 필드
         OutlinedTextField(
             value = confirmPassword,
             onValueChange = { confirmPassword = it },
@@ -63,21 +66,26 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // 회원가입 버튼
         Button(
             onClick = {
-                if (password == confirmPassword) {
-                    isLoading = true
-                    viewModel.registerUser(email, password) { success ->
-                        isLoading = false
-                        if (success) {
-                            Toast.makeText(context, "회원가입 성공!", Toast.LENGTH_SHORT).show()
-                            onRegisterSuccess()
-                        } else {
-                            Toast.makeText(context, "회원가입 실패. 다시 시도해주세요.", Toast.LENGTH_SHORT).show()
+                if (email.isNotBlank() && password.isNotBlank() && confirmPassword.isNotBlank()) {
+                    if (password == confirmPassword) {
+                        isLoading = true
+                        viewModel.registerUser(email, password) { success ->
+                            isLoading = false
+                            if (success) {
+                                Toast.makeText(context, "회원가입 성공!", Toast.LENGTH_SHORT).show()
+                                onRegisterSuccess()
+                            } else {
+                                Toast.makeText(context, "회원가입 실패. 다시 시도해주세요.", Toast.LENGTH_SHORT).show()
+                            }
                         }
+                    } else {
+                        Toast.makeText(context, "비밀번호가 일치하지 않습니다.", Toast.LENGTH_SHORT).show()
                     }
                 } else {
-                    Toast.makeText(context, "비밀번호가 일치하지 않습니다.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "모든 필드를 입력해주세요.", Toast.LENGTH_SHORT).show()
                 }
             },
             enabled = !isLoading,

@@ -55,6 +55,11 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.espresso.core)
+    implementation(libs.firebase.storage.ktx)
+    implementation(libs.firebase.messaging)
+    implementation(libs.androidx.navigation.runtime.ktx)
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.foundation.layout.android)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -64,8 +69,13 @@ dependencies {
     implementation(libs.google.firebase.analytics)
     implementation(libs.firebase.auth)
     implementation(libs.google.firebase.firestore)
+    implementation(libs.firebase.messaging.ktx)
     implementation(libs.play.services.auth)
     implementation(libs.androidx.activity.compose)
+
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.google.firebase.auth.ktx)
+    implementation(libs.firebase.firestore.ktx)
 
     implementation(libs.androidx.ui.v153)
     implementation(libs.androidx.compose.material3)
@@ -77,6 +87,9 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.material.icons.core)
     implementation(libs.androidx.material.icons.extended)
+
+
+    implementation(libs.coil.compose)
 
 
 }
