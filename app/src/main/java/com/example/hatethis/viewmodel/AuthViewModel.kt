@@ -1,14 +1,14 @@
 package com.example.hatethis.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
-import com.example.hatethis.model.Mission
+import com.example.hatethis.model.InviteData
 import com.example.hatethis.model.UserProfile
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.tasks.await
 
 class AuthViewModel : ViewModel() {
     private val firebaseAuth: FirebaseAuth = FirebaseAuth.getInstance()
@@ -18,9 +18,6 @@ class AuthViewModel : ViewModel() {
     private val _isLoggedIn = MutableStateFlow(false)
     val isLoggedIn: StateFlow<Boolean> get() = _isLoggedIn
 
-    private val _missions = MutableStateFlow<List<Mission>>(emptyList())
-    val missions: StateFlow<List<Mission>> get() = _missions
-
     init {
         checkLoginStatus() // 초기 로그인 상태 확인
     }
@@ -29,26 +26,37 @@ class AuthViewModel : ViewModel() {
     fun registerUser(email: String, password: String, onResult: (Boolean) -> Unit) {
         firebaseAuth.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
-                onResult(task.isSuccessful)
+                if (task.isSuccessful) {
+                    onResult(true) // 회원가입 성공
+                } else {
+                    onResult(false) // 회원가입 실패
+                }
             }
     }
 
-    // Google 로그인
+    // 로그인 로직
     fun signInWithGoogle(idToken: String, onResult: (Boolean) -> Unit) {
         val credential = GoogleAuthProvider.getCredential(idToken, null)
         firebaseAuth.signInWithCredential(credential)
             .addOnCompleteListener { task ->
-                if (task.isSuccessful) checkLoginStatus()
-                onResult(task.isSuccessful)
+                if (task.isSuccessful) {
+                    checkLoginStatus() // 로그인 상태 업데이트
+                    onResult(true)
+                } else {
+                    onResult(false)
+                }
             }
     }
 
-    // 이메일 및 비밀번호 로그인
     fun signInWithEmailAndPassword(email: String, password: String, onResult: (Boolean) -> Unit) {
         firebaseAuth.signInWithEmailAndPassword(email, password)
             .addOnCompleteListener { task ->
-                if (task.isSuccessful) checkLoginStatus()
-                onResult(task.isSuccessful)
+                if (task.isSuccessful) {
+                    checkLoginStatus() // 로그인 상태 업데이트
+                    onResult(true) // 로그인 성공
+                } else {
+                    onResult(false) // 로그인 실패
+                }
             }
     }
 
@@ -63,16 +71,9 @@ class AuthViewModel : ViewModel() {
         if (userId.isNotEmpty()) {
             firestore.collection("users").document(userId)
                 .set(profile)
-                .addOnSuccessListener {
-                    Log.d("Firestore", "유저 프로필 저장 성공")
-                    onResult(true)
-                }
-                .addOnFailureListener { exception ->
-                    Log.e("Firestore", "유저 프로필 저장 실패: ${exception.localizedMessage}")
-                    onResult(false)
-                }
+                .addOnSuccessListener { onResult(true) }
+                .addOnFailureListener { onResult(false) }
         } else {
-            Log.e("Firestore", "유저 인증되지 않음")
             onResult(false)
         }
     }
@@ -88,17 +89,87 @@ class AuthViewModel : ViewModel() {
                         val profile = document.toObject(UserProfile::class.java)
                         onResult(profile)
                     } else {
-                        onResult(null) // 프로필 데이터 없음
+                        onResult(null)
                     }
                 }
                 .addOnFailureListener {
-                    Log.e("Firestore", "유저 프로필 로드 실패")
                     onResult(null)
                 }
         } else {
             onResult(null)
         }
     }
+
+    // 초대 코드 저장
+    suspend fun saveInviteCode(uid: String, inviteCode: String): Boolean {
+        return try {
+            val expirationTime = System.currentTimeMillis() + 24 * 60 * 60 * 1000 // 24시간 후 만료
+            val inviteData = InviteData(
+                uid = uid,
+                inviteCode = inviteCode,
+                expirationTime = expirationTime
+            )
+
+            firestore.collection("invites")
+                .document(uid)
+                .set(inviteData)
+                .await()
+
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    // 만료된 초대 코드 삭제
+    suspend fun deleteExpiredInviteCodes() {
+        try {
+            val currentTime = System.currentTimeMillis()
+            val snapshot = firestore.collection("invites")
+                .whereLessThanOrEqualTo("expirationTime", currentTime)
+                .get()
+                .await()
+
+            val expiredInvites = snapshot.toObjects(InviteData::class.java)
+            for (invite in expiredInvites) {
+                firestore.collection("invites").document(invite.uid).delete().await()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    // 초대 코드로 파트너 연결
+    suspend fun x2connectPartner(userUid: String, partnerCode: String): Boolean {
+        return try {
+            val snapshot = firestore.collection("users")
+                .whereEqualTo("inviteCode", partnerCode)
+                .get()
+                .await()
+
+            if (snapshot.documents.isEmpty()) {
+                return false
+            }
+
+            val partnerUid = snapshot.documents[0].id
+
+            // Firestore에 파트너 정보 업데이트
+            firestore.collection("users").document(userUid)
+                .update("partnerUid", partnerUid)
+                .await()
+
+            firestore.collection("users").document(partnerUid)
+                .update("partnerUid", userUid)
+                .await()
+
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
 
     // 로그아웃
     fun logout() {
@@ -111,20 +182,34 @@ class AuthViewModel : ViewModel() {
         _isLoggedIn.value = firebaseAuth.currentUser != null
     }
 
-    fun loadUserProfileByUid(userUid: String, onResult: (UserProfile?) -> Unit) {
-        firestore.collection("users").document(userUid)
-            .get()
-            .addOnSuccessListener { document ->
-                if (document.exists()) {
-                    val profile = document.toObject(UserProfile::class.java)
-                    onResult(profile)
-                } else {
-                    onResult(null)
-                }
+    suspend fun generateUniqueInviteCode(): String {
+        var isUnique = false
+        var newCode: String
+
+        do {
+            newCode = com.example.hatethis.utils.InviteUtils.generateInviteCode()
+            val existingCode = firestore.collection("users")
+                .whereEqualTo("inviteCode", newCode)
+                .get()
+                .await()
+
+            if (existingCode.isEmpty) {
+                isUnique = true
             }
-            .addOnFailureListener {
-                onResult(null)
-            }
+        } while (!isUnique)
+
+        return newCode
+    }
+    suspend fun updateInviteCode(userUid: String, inviteCode: String): Boolean {
+        return try {
+            firestore.collection("users").document(userUid)
+                .update("inviteCode", inviteCode)
+                .await()
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
     }
 
 }

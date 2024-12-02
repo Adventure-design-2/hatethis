@@ -17,7 +17,6 @@ import com.example.hatethis.ui.mission.MissionScreen
 import com.example.hatethis.ui.profile.ProfileScreen
 import com.example.hatethis.ui.register.RegisterScreen
 import com.example.hatethis.viewmodel.AuthViewModel
-import com.example.hatethis.viewmodel.InviteViewModel
 import com.example.hatethis.viewmodel.MissionViewModel
 
 class MainActivity : ComponentActivity() {
@@ -26,7 +25,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             val navController = rememberNavController()
             val authViewModel: AuthViewModel = viewModel() // AuthViewModel
-            val inviteViewModel: InviteViewModel = viewModel() // InviteViewModel
             val missionViewModel: MissionViewModel = viewModel() // MissionViewModel
 
             // 로그인 상태를 collectAsState로 관찰
@@ -36,7 +34,6 @@ class MainActivity : ComponentActivity() {
             AppNavHost(
                 navController = navController,
                 authViewModel = authViewModel,
-                inviteViewModel = inviteViewModel,
                 missionViewModel = missionViewModel,
                 isLoggedIn = isLoggedIn
             )
@@ -48,7 +45,6 @@ class MainActivity : ComponentActivity() {
 fun AppNavHost(
     navController: NavHostController,
     authViewModel: AuthViewModel,
-    inviteViewModel: InviteViewModel,
     missionViewModel: MissionViewModel,
     isLoggedIn: Boolean
 ) {
@@ -87,10 +83,9 @@ fun AppNavHost(
         }
 
         // 초대 화면
-        // 초대 화면
         composable("invite") {
             InviteScreen(
-                viewModel = authViewModel, // 전달된 InviteViewModel
+                authViewModel = authViewModel, // 전달된 InviteViewModel
                 userUid = authViewModel.getCurrentUserId() // userUid 전달
             )
         }
