@@ -141,7 +141,7 @@ class AuthViewModel : ViewModel() {
     }
 
     // 초대 코드로 파트너 연결
-    suspend fun x2connectPartner(userUid: String, partnerCode: String): Boolean {
+    suspend fun connectPartner(userUid: String, partnerCode: String): Boolean {
         return try {
             val snapshot = firestore.collection("users")
                 .whereEqualTo("inviteCode", partnerCode)

@@ -25,7 +25,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.example.hatethis.utils.InviteUtils
 import com.example.hatethis.viewmodel.AuthViewModel
 import kotlinx.coroutines.launch
 
