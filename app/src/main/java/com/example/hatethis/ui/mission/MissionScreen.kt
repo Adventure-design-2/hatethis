@@ -9,7 +9,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -19,7 +18,9 @@ import com.example.hatethis.viewmodel.MissionViewModel
 @Composable
 fun MissionScreen(
     viewModel: MissionViewModel = viewModel(),
-    onNavigateToProfile: () -> Unit
+    onNavigateToProfile: () -> Unit,
+    onNavigateToRecords: () -> Unit, // 기록 목록 화면으로 이동하는 콜백 추가
+    onNavigateToRecordInput: () -> Unit // 기록 작성 화면으로 이동하는 콜백 추가
 ) {
     val missions = viewModel.missions.collectAsState()
 
@@ -33,12 +34,29 @@ fun MissionScreen(
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // 프로필로 이동하는 버튼
-        Button(
-            onClick = onNavigateToProfile,
-            modifier = Modifier.align(Alignment.End)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(text = "프로필로 이동")
+            // 기록 목록 화면으로 이동하는 버튼
+            Button(onClick = onNavigateToRecords) {
+                Text(text = "기록 목록 보기")
+            }
+
+            // 프로필 화면으로 이동하는 버튼
+            Button(onClick = onNavigateToProfile) {
+                Text(text = "프로필로 이동")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 기록 작성 화면으로 이동하는 버튼
+        Button(
+            onClick = onNavigateToRecordInput,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(text = "기록 작성하기")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
