@@ -1,4 +1,3 @@
-// MainActivity.kt
 package com.example.hatethis
 
 import android.os.Bundle
@@ -7,17 +6,18 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.hatethis.data.DataRepository
+import com.example.hatethis.data.FirebaseService
+import com.example.hatethis.data.LocalDataStore
 import com.example.hatethis.ui.invite.InviteScreen
 import com.example.hatethis.ui.login.LoginScreen
 import com.example.hatethis.ui.mission.MissionScreen
 import com.example.hatethis.ui.profile.ProfileScreen
-import com.example.hatethis.ui.records.RecordInputScreen
-import com.example.hatethis.ui.records.RecordListScreen
+import com.example.hatethis.ui.records.RecordScreen
 import com.example.hatethis.ui.register.RegisterScreen
 import com.example.hatethis.viewmodel.AuthViewModel
 import com.example.hatethis.viewmodel.MissionViewModel
@@ -32,11 +32,18 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val navController = rememberNavController()
-            val authViewModel: AuthViewModel = viewModel() // AuthViewModel
-            val missionViewModel: MissionViewModel = viewModel() // MissionViewModel
-            val recordViewModel: RecordViewModel = viewModel() // RecordViewModel
+            val authViewModel = AuthViewModel() // AuthViewModel 초기화
+            val missionViewModel = MissionViewModel() // MissionViewModel 초기화
 
-            // 로그인 상태를 collectAsState로 관찰
+            // DataRepository 및 LocalDataStore 초기화
+            val firebaseService = FirebaseService()
+            val localDataStore = LocalDataStore(context = applicationContext)
+            val dataRepository = DataRepository(firebaseService, localDataStore)
+
+            // RecordViewModel 초기화
+            val recordViewModel = RecordViewModel(dataRepository, localDataStore)
+
+            // 로그인 상태 관찰
             val isLoggedIn by authViewModel.isLoggedIn.collectAsState(initial = false)
 
             // 네비게이션 구성
@@ -69,15 +76,11 @@ fun AppNavHost(
                 viewModel = authViewModel,
                 onLoginSuccess = {
                     navController.navigate("mission") {
-                        popUpTo("login") { inclusive = true } // 로그인 후 이전 스택 제거
+                        popUpTo("login") { inclusive = true }
                     }
                 },
-                onNavigateToRegister = {
-                    navController.navigate("register") // 회원가입 화면으로 이동
-                },
-                onNavigateToInvite = {
-                    navController.navigate("invite") // 초대 화면으로 이동
-                }
+                onNavigateToRegister = { navController.navigate("register") },
+                onNavigateToInvite = { navController.navigate("invite") }
             )
         }
 
@@ -87,7 +90,7 @@ fun AppNavHost(
                 viewModel = authViewModel,
                 onRegisterSuccess = {
                     navController.navigate("login") {
-                        popUpTo("register") { inclusive = true } // 회원가입 후 로그인 화면으로 이동
+                        popUpTo("register") { inclusive = true }
                     }
                 }
             )
@@ -96,18 +99,18 @@ fun AppNavHost(
         // 초대 화면
         composable("invite") {
             InviteScreen(
-                authViewModel = authViewModel, // 전달된 InviteViewModel
-                userUid = authViewModel.getCurrentUserId() // userUid 전달
+                authViewModel = authViewModel,
+                userUid = authViewModel.getCurrentUserId()
             )
         }
 
         // 미션 화면
         composable("mission") {
             MissionScreen(
-                viewModel = missionViewModel, // 전달된 MissionViewModel
+                viewModel = missionViewModel,
                 onNavigateToProfile = { navController.navigate("profile") },
-                onNavigateToRecords = { navController.navigate("records") }, // 기록 목록 화면으로 이동
-                onNavigateToRecordInput = { navController.navigate("recordInput") } // 기록 입력 화면으로 이동
+                onNavigateToRecords = { navController.navigate("records") },
+                onNavigateToRecordInput = { navController.navigate("recordInput") }
             )
         }
 
@@ -116,28 +119,24 @@ fun AppNavHost(
             ProfileScreen(
                 viewModel = authViewModel,
                 onNavigateToMission = { navController.navigate("mission") },
-                onNavigateToInvite = { navController.navigate("invite") }, // 초대 화면 이동 추가
+                onNavigateToInvite = { navController.navigate("invite") },
                 onLogout = {
-                    authViewModel.logout() // 로그아웃 처리
+                    authViewModel.logout()
                     navController.navigate("login") {
-                        popUpTo("profile") { inclusive = true } // 로그아웃 후 이전 스택 제거
+                        popUpTo("profile") { inclusive = true }
                     }
                 }
             )
         }
 
-        // 기록 화면
+        // 기록 화면 (기록 목록)
         composable("records") {
-            RecordListScreen(
-                viewModel = recordViewModel // RecordViewModel 전달
-            )
+            RecordScreen(viewModel = recordViewModel)
         }
 
         // 기록 입력 화면
         composable("recordInput") {
-            RecordInputScreen(
-                viewModel = recordViewModel // RecordViewModel 전달
-            )
+            RecordScreen(viewModel = recordViewModel)
         }
     }
 }

@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     id("com.google.gms.google-services")
+    id("kotlin-kapt")
 }
 
 android {
@@ -37,13 +38,22 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8 // Java 1.8 설정 유지
+        sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
 
     kotlinOptions {
-        jvmTarget = "1.8" // JVM 타겟 버전을 1.8로 유지
+        jvmTarget = "1.8"
     }
+}
+
+configurations.all {
+    resolutionStrategy {
+        force("org.jetbrains:annotations:23.0.0") // annotations 중복 문제 해결
+    }
+}
+configurations.implementation{
+    exclude(group = "com.intellij", module = "annotations")
 }
 
 dependencies {
@@ -60,6 +70,16 @@ dependencies {
     implementation(libs.androidx.navigation.runtime.ktx)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.foundation.layout.android)
+    implementation(libs.androidx.room.common)
+
+    // Room 디펜던시
+    implementation("androidx.room:room-runtime:2.6.1")
+//    implementation("androidx.room:room-compiler:2.6.1") // Annotation Processor
+    implementation("androidx.room:room-ktx:2.6.1") // Kotlin Coroutines 통합
+    kapt("androidx.room:room-compiler:2.6.1")
+    // Gson
+    implementation("com.google.code.gson:gson:2.10.1")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -88,8 +108,6 @@ dependencies {
     implementation(libs.androidx.material.icons.core)
     implementation(libs.androidx.material.icons.extended)
 
-
     implementation(libs.coil.compose)
-
 
 }
