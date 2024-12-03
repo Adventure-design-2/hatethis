@@ -1,4 +1,3 @@
-// MainActivity.kt
 package com.example.hatethis
 
 import android.os.Bundle
@@ -126,17 +125,23 @@ fun AppNavHost(
             )
         }
 
-        // 기록 화면
+        // 기록 목록 화면
         composable("records") {
+            val userUid = authViewModel.getCurrentUserId() // 사용자 UID 가져오기
             RecordListScreen(
-                viewModel = recordViewModel // RecordViewModel 전달
+                viewModel = recordViewModel,
+                userUid = userUid // 사용자 UID 전달
             )
         }
 
+
         // 기록 입력 화면
         composable("recordInput") {
+            val userUid = authViewModel.getCurrentUserId() // 현재 사용자 UID 가져오기
             RecordInputScreen(
-                viewModel = recordViewModel // RecordViewModel 전달
+                viewModel = recordViewModel,
+                userUid = userUid, // 사용자 UID 전달
+                onNavigateToRecordList = { navController.navigate("records") } // 저장 후 기록 목록 화면으로 이동
             )
         }
     }
