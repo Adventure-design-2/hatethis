@@ -2,35 +2,51 @@ package com.example.hatethis.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.hatethis.data.DataRepository
 import com.example.hatethis.model.Mission
-import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 
-class MissionViewModel : ViewModel() {
-    private val firestore = FirebaseFirestore.getInstance()
+class MissionViewModel(private val repository: DataRepository) : ViewModel() {
 
-    // 미션 목록 상태 관리
     private val _missions = MutableStateFlow<List<Mission>>(emptyList())
     val missions: StateFlow<List<Mission>> = _missions
 
-    // Firestore에서 미션 목록 불러오기
+    init {
+        updateMissionsFromServer()
+        loadLocalMissions()
+    }
+
+    // 서버에서 미션 업데이트
+    private fun updateMissionsFromServer() {
+        viewModelScope.launch {
+            try {
+                val serverMissions = repository.fetchMissionsFromServer()
+                repository.updateLocalMissions(serverMissions) // 로컬 데이터 업데이트
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    // 로컬 저장소에서 미션 로드
+    private fun loadLocalMissions() {
+        viewModelScope.launch {
+            val localMissions = repository.getLocalMissions()
+            _missions.value = localMissions
+        }
+    }
+
+    // Firestore에서 미션 로드 후 로컬 저장소 업데이트
     fun loadMissions() {
         viewModelScope.launch {
             try {
-                val snapshot = firestore.collection("missions")
-                    .get()
-                    .await()
-
-                val missionList = snapshot.documents.mapNotNull { doc ->
-                    doc.toObject(Mission::class.java)
-                }
-                _missions.value = missionList
+                val serverMissions = repository.fetchMissionsFromServer()
+                repository.updateLocalMissions(serverMissions)
+                _missions.value = repository.getLocalMissions()
             } catch (e: Exception) {
                 e.printStackTrace()
-                _missions.value = emptyList() // 실패 시 빈 목록 반환
             }
         }
     }

@@ -14,7 +14,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import com.example.hatethis.viewmodel.RecordViewModel
@@ -22,7 +21,7 @@ import com.example.hatethis.viewmodel.UploadStatus
 import kotlinx.coroutines.launch
 
 @Composable
-fun RecordScreen(viewModel: RecordViewModel, onNavigateToRecordList: () -> Unit) {
+fun RecordScreen(viewModel: RecordViewModel, onSaveComplete: () -> Unit) {
     val state by viewModel.uiState.collectAsState()
     val coroutineScope = rememberCoroutineScope()
 
@@ -32,6 +31,7 @@ fun RecordScreen(viewModel: RecordViewModel, onNavigateToRecordList: () -> Unit)
             .padding(16.dp),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
+        // 사진 업로드 섹션
         PhotoUpload(
             photoUrl = state.photoUrl,
             onPhotoSelected = { uri -> viewModel.onPhotoSelected(uri) }
@@ -39,6 +39,7 @@ fun RecordScreen(viewModel: RecordViewModel, onNavigateToRecordList: () -> Unit)
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // 텍스트 입력 섹션
         TextInput(
             text = state.text,
             onTextChange = { newText -> viewModel.onTextChanged(newText) }
@@ -46,6 +47,7 @@ fun RecordScreen(viewModel: RecordViewModel, onNavigateToRecordList: () -> Unit)
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // 감정 선택 섹션
         EmotionSelector(
             selectedEmotion = state.emotion,
             onEmotionSelected = { emotion -> viewModel.onEmotionSelected(emotion) }
@@ -53,7 +55,9 @@ fun RecordScreen(viewModel: RecordViewModel, onNavigateToRecordList: () -> Unit)
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // 저장 버튼
         SaveButton(
+            isUploading = state.uploadStatus == UploadStatus.UPLOADING,
             onSaveClick = {
                 coroutineScope.launch {
                     viewModel.saveRecord()
@@ -63,52 +67,33 @@ fun RecordScreen(viewModel: RecordViewModel, onNavigateToRecordList: () -> Unit)
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 저장 성공 여부에 따라 네비게이션
-        if (state.isSaved) {
-            LaunchedEffect(state.isSaved) {
-                onNavigateToRecordList() // 저장 성공 시 기록 목록으로 이동
-            }
-        }
-
-        state.errorMessage?.let { error ->
-            Text(
-                text = error,
-                color = MaterialTheme.colorScheme.error,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
-        }
-
+        // 업로드 상태 및 메시지 표시
         when (state.uploadStatus) {
-            UploadStatus.UPLOADING -> {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
-                Text(
-                    text = "Uploading...",
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                )
-            }
             UploadStatus.SUCCESS -> {
                 Text(
-                    text = "Upload Successful!",
+                    text = "Record successfully saved!",
                     color = MaterialTheme.colorScheme.primary,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
+                LaunchedEffect(Unit) {
+                    onSaveComplete() // 저장 완료 후 콜백 호출
+                }
             }
+
             UploadStatus.FAILURE -> {
                 Text(
-                    text = "Upload Failed: ${state.errorMessage ?: "Unknown Error"}",
-                    color = Color.Red,
+                    text = state.errorMessage ?: "Unknown error occurred.",
+                    color = MaterialTheme.colorScheme.error,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
             }
-            else -> {}
+
+            else -> {} // IDLE 및 UPLOADING 상태에 대한 추가 작업 없음
         }
     }
 }
-
 
 
 @Composable
@@ -171,11 +156,21 @@ fun EmotionSelector(selectedEmotion: String?, onEmotionSelected: (String) -> Uni
 }
 
 @Composable
-fun SaveButton(onSaveClick: () -> Unit) {
+fun SaveButton(isUploading: Boolean, onSaveClick: () -> Unit) {
     Button(
         onClick = onSaveClick,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        enabled = !isUploading // 업로드 중에는 버튼 비활성화
     ) {
-        Text("Save")
+        if (isUploading) {
+            CircularProgressIndicator(
+                color = Color.White,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Saving...")
+        } else {
+            Text("Save")
+        }
     }
 }

@@ -11,22 +11,21 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.hatethis.model.Mission
-import com.example.hatethis.viewmodel.MissionViewModel
+import com.example.hatethis.viewmodel.MissionRecommendationViewModel
 
 @Composable
 fun MissionScreen(
-    viewModel: MissionViewModel = viewModel(),
+    viewModel: MissionRecommendationViewModel,
     onNavigateToProfile: () -> Unit,
-    onNavigateToRecordList: () -> Unit, // 기록 목록 화면으로 이동하는 콜백 이름 변경
-    onNavigateToRecordInput: () -> Unit // 기록 작성 화면으로 이동하는 콜백
+    onNavigateToRecordList: () -> Unit,
+    onNavigateToRecordInput: () -> Unit
 ) {
-    val missions = viewModel.missions.collectAsState()
+    val missions = viewModel.recommendedMissions.collectAsState()
 
     // Firestore에서 미션 로드
     LaunchedEffect(Unit) {
-        viewModel.loadMissions()
+        viewModel.recommendMissions()
     }
 
     Column(
@@ -34,14 +33,13 @@ fun MissionScreen(
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // 상단 버튼 행
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Button(onClick = onNavigateToRecordList) { // 기록 목록 화면으로 이동
+            Button(onClick = onNavigateToRecordList) {
                 Text(text = "기록 목록 보기")
             }
 
@@ -50,7 +48,6 @@ fun MissionScreen(
             }
         }
 
-        // 기록 작성 버튼
         Button(
             onClick = onNavigateToRecordInput,
             modifier = Modifier
@@ -61,24 +58,26 @@ fun MissionScreen(
         }
 
         Text(
-            text = "미션 목록",
+            text = "추천 미션 목록",
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
-        // 미션 목록 표시
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(missions.value) { mission ->
-                MissionItem(mission = mission)
+                MissionItem(
+                    mission = mission.first,
+                    score = mission.second
+                )
             }
         }
     }
 }
 
 @Composable
-fun MissionItem(mission: Mission) {
+fun MissionItem(mission: Mission, score: Double) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -87,9 +86,11 @@ fun MissionItem(mission: Mission) {
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            Text(text = "제목: ${mission.missionDetails.title}")
-            Text(text = "설명: ${mission.missionDetails.description}")
-            Text(text = "생성 시간: ${mission.missionDetails.createdAt}")
+            Text(text = "제목: ${mission.title}")
+            Text(text = "환경: ${mission.environment}")
+            Text(text = "태그: ${mission.locationTag.joinToString(", ")}")
+            Text(text = "설명: ${mission.detail}")
+            Text(text = "추천 점수: ${"%.2f".format(score)}")
         }
     }
 }

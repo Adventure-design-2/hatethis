@@ -4,8 +4,10 @@ import android.net.Uri
 import com.example.hatethis.model.DateRecord
 import com.example.hatethis.model.EmotionStatus
 import com.example.hatethis.model.MissionStatus
+import com.google.firebase.Firebase
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.firestore.firestore
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
 import kotlinx.coroutines.Dispatchers
@@ -103,4 +105,12 @@ class FirebaseService {
             throw IllegalStateException("사진 삭제 실패: ${e.message}", e)
         }
     }
+
+    suspend fun getMissionsFromFirestore(): List<Map<String, Any>> {
+        return withContext(Dispatchers.IO) {
+            val snapshot = Firebase.firestore.collection("missions").get().await()
+            snapshot.documents.mapNotNull { it.data }
+        }
+    }
+
 }

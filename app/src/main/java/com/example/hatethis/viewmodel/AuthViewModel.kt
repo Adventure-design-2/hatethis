@@ -65,18 +65,7 @@ class AuthViewModel : ViewModel() {
         return firebaseAuth.currentUser?.uid ?: ""
     }
 
-    // 유저 프로필 저장
-    fun saveUserProfile(profile: UserProfile, onResult: (Boolean) -> Unit) {
-        val userId = getCurrentUserId()
-        if (userId.isNotEmpty()) {
-            firestore.collection("users").document(userId)
-                .set(profile)
-                .addOnSuccessListener { onResult(true) }
-                .addOnFailureListener { onResult(false) }
-        } else {
-            onResult(false)
-        }
-    }
+
 
     // 유저 프로필 로드
     fun loadUserProfile(onResult: (UserProfile?) -> Unit) {
@@ -92,13 +81,32 @@ class AuthViewModel : ViewModel() {
                         onResult(null)
                     }
                 }
-                .addOnFailureListener {
+                .addOnFailureListener { e ->
+                    e.printStackTrace()
                     onResult(null)
                 }
         } else {
             onResult(null)
         }
     }
+
+    fun saveUserProfile(profile: UserProfile, onResult: (Boolean) -> Unit) {
+        val userId = getCurrentUserId()
+        if (userId.isNotEmpty()) {
+            firestore.collection("users").document(userId)
+                .set(profile)
+                .addOnSuccessListener {
+                    onResult(true)
+                }
+                .addOnFailureListener { e ->
+                    e.printStackTrace()
+                    onResult(false)
+                }
+        } else {
+            onResult(false)
+        }
+    }
+
 
     // 초대 코드 저장
     suspend fun saveInviteCode(uid: String, inviteCode: String): Boolean {
@@ -212,4 +220,18 @@ class AuthViewModel : ViewModel() {
         }
     }
 
+    suspend fun fetchPartnerId(): String? {
+        val userId = getCurrentUserId()
+        if (userId.isNotEmpty()) {
+            return try {
+                val document = firestore.collection("users").document(userId).get().await()
+                val userProfile = document.toObject(UserProfile::class.java)
+                userProfile?.partnerUid
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
+        }
+        return null
+    }
 }

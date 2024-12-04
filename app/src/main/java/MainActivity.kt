@@ -6,7 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -21,31 +21,39 @@ import com.example.hatethis.ui.profile.ProfileScreen
 import com.example.hatethis.ui.records.RecordListScreen
 import com.example.hatethis.ui.records.RecordScreen
 import com.example.hatethis.ui.register.RegisterScreen
-import com.example.hatethis.viewmodel.AuthViewModel
-import com.example.hatethis.viewmodel.MissionViewModel
-import com.example.hatethis.viewmodel.RecordListViewModel
-import com.example.hatethis.viewmodel.RecordViewModel
+import com.example.hatethis.viewmodel.*
+import com.example.hatethis.viewmodel.factory.MissionRecommendationViewModelFactory
+import com.example.hatethis.viewmodel.factory.RecordListViewModelFactory
+import com.example.hatethis.viewmodel.factory.RecordViewModelFactory
 import com.google.firebase.FirebaseApp
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         // Firebase 초기화
         FirebaseApp.initializeApp(this)
 
         setContent {
             val navController = rememberNavController()
-            val authViewModel: AuthViewModel = viewModel()
-            val missionViewModel: MissionViewModel = viewModel()
+            val authViewModel: AuthViewModel = ViewModelProvider(this)[AuthViewModel::class.java]
 
             // DataRepository 및 LocalDataStore 초기화
             val firebaseService = FirebaseService()
             val localDataStore = LocalDataStore(context = applicationContext)
             val dataRepository = DataRepository(firebaseService, localDataStore)
 
+            // MissionRecommendationViewModel 초기화
+            val missionViewModelFactory = MissionRecommendationViewModelFactory(dataRepository)
+            val missionViewModel: MissionRecommendationViewModel =
+                ViewModelProvider(this, missionViewModelFactory)[MissionRecommendationViewModel::class.java]
+
             // Record 관련 ViewModel 초기화
-            val recordViewModel = RecordViewModel(dataRepository)
-            val recordListViewModel = RecordListViewModel(dataRepository)
+            val recordViewModelFactory = RecordViewModelFactory(dataRepository, authViewModel)
+            val recordViewModel: RecordViewModel = ViewModelProvider(this, recordViewModelFactory)[RecordViewModel::class.java]
+
+            val recordListViewModelFactory = RecordListViewModelFactory(dataRepository, authViewModel)
+            val recordListViewModel: RecordListViewModel = ViewModelProvider(this, recordListViewModelFactory)[RecordListViewModel::class.java]
 
             // 로그인 상태 관찰
             val isLoggedIn by authViewModel.isLoggedIn.collectAsState(initial = false)
@@ -67,7 +75,7 @@ class MainActivity : ComponentActivity() {
 fun AppNavHost(
     navController: NavHostController,
     authViewModel: AuthViewModel,
-    missionViewModel: MissionViewModel,
+    missionViewModel: MissionRecommendationViewModel,
     recordViewModel: RecordViewModel,
     recordListViewModel: RecordListViewModel,
     isLoggedIn: Boolean
@@ -136,28 +144,27 @@ fun AppNavHost(
         }
 
         // 기록 리스트 화면
-        // MainActivity.kt
         composable("recordList") {
             RecordListScreen(
                 viewModel = recordListViewModel,
+                onNavigateToMission = { navController.navigate("mission") },
+                onAddNewRecord = { navController.navigate("recordInput") },
                 onRecordClick = { recordId ->
-                    navController.navigate("recordDetail/$recordId") // 기록 상세 화면으로 이동
+                    navController.navigate("recordDetail/$recordId")
                 }
             )
         }
-
 
         // 기록 입력 화면
         composable("recordInput") {
             RecordScreen(
                 viewModel = recordViewModel,
-                onNavigateToRecordList = {
+                onSaveComplete = {
                     navController.navigate("recordList") {
                         popUpTo("recordInput") { inclusive = true }
                     }
                 }
             )
         }
-
     }
 }

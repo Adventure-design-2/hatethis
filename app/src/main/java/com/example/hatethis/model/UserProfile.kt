@@ -5,6 +5,6 @@ data class UserProfile(
     val name: String = "",
     val bio: String = "",
     val imageUrl: String = "",
-    val parameterName: String = "", // 파라미터 필드 추가
+    val partnerUid: String = "", // 파트너 id
     val inviteCode: String = "" // 초대 코드 필드 추가
 )

@@ -135,6 +135,14 @@ fun ProfileScreen(
                     isLoading = false
                     if (success) {
                         Toast.makeText(context, "프로필이 저장되었습니다!", Toast.LENGTH_SHORT).show()
+                        // 저장 후 프로필 다시 로드
+                        viewModel.loadUserProfile { loadedProfile ->
+                            loadedProfile?.let {
+                                name = it.name
+                                bio = it.bio
+                                imageUrl = it.imageUrl
+                            }
+                        }
                     } else {
                         Toast.makeText(context, "프로필 저장에 실패했습니다!", Toast.LENGTH_SHORT).show()
                     }

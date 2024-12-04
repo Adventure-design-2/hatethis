@@ -1,8 +1,9 @@
 package com.example.hatethis.model
 
 data class Mission(
-    val missionId: String = "",              // 미션 ID
-    val participants: List<String> = emptyList(), // 참여자 UID 리스트
-    val missionDetails: MissionDetails = MissionDetails(), // 미션 기본 정보
-    val records: Map<String, MissionRecord> = emptyMap()   // 참여자별 기록
+    val title: String,
+    val environment: Int,
+    val locationTag: List<String>,
+    val detail: String,
+    var completedCount: Int = 0 // 완료 횟수 필드 추가
 )
