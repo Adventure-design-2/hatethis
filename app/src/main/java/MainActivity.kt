@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -17,10 +18,12 @@ import com.example.hatethis.ui.invite.InviteScreen
 import com.example.hatethis.ui.login.LoginScreen
 import com.example.hatethis.ui.mission.MissionScreen
 import com.example.hatethis.ui.profile.ProfileScreen
+import com.example.hatethis.ui.records.RecordListScreen
 import com.example.hatethis.ui.records.RecordScreen
 import com.example.hatethis.ui.register.RegisterScreen
 import com.example.hatethis.viewmodel.AuthViewModel
 import com.example.hatethis.viewmodel.MissionViewModel
+import com.example.hatethis.viewmodel.RecordListViewModel
 import com.example.hatethis.viewmodel.RecordViewModel
 import com.google.firebase.FirebaseApp
 
@@ -32,16 +35,17 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val navController = rememberNavController()
-            val authViewModel = AuthViewModel() // AuthViewModel 초기화
-            val missionViewModel = MissionViewModel() // MissionViewModel 초기화
+            val authViewModel: AuthViewModel = viewModel()
+            val missionViewModel: MissionViewModel = viewModel()
 
             // DataRepository 및 LocalDataStore 초기화
             val firebaseService = FirebaseService()
             val localDataStore = LocalDataStore(context = applicationContext)
             val dataRepository = DataRepository(firebaseService, localDataStore)
 
-            // RecordViewModel 초기화
-            val recordViewModel = RecordViewModel(dataRepository, localDataStore)
+            // Record 관련 ViewModel 초기화
+            val recordViewModel = RecordViewModel(dataRepository)
+            val recordListViewModel = RecordListViewModel(dataRepository)
 
             // 로그인 상태 관찰
             val isLoggedIn by authViewModel.isLoggedIn.collectAsState(initial = false)
@@ -52,6 +56,7 @@ class MainActivity : ComponentActivity() {
                 authViewModel = authViewModel,
                 missionViewModel = missionViewModel,
                 recordViewModel = recordViewModel,
+                recordListViewModel = recordListViewModel,
                 isLoggedIn = isLoggedIn
             )
         }
@@ -64,6 +69,7 @@ fun AppNavHost(
     authViewModel: AuthViewModel,
     missionViewModel: MissionViewModel,
     recordViewModel: RecordViewModel,
+    recordListViewModel: RecordListViewModel,
     isLoggedIn: Boolean
 ) {
     NavHost(
@@ -109,7 +115,7 @@ fun AppNavHost(
             MissionScreen(
                 viewModel = missionViewModel,
                 onNavigateToProfile = { navController.navigate("profile") },
-                onNavigateToRecords = { navController.navigate("records") },
+                onNavigateToRecordList = { navController.navigate("recordList") },
                 onNavigateToRecordInput = { navController.navigate("recordInput") }
             )
         }
@@ -129,14 +135,29 @@ fun AppNavHost(
             )
         }
 
-        // 기록 화면 (기록 목록)
-        composable("records") {
-            RecordScreen(viewModel = recordViewModel)
+        // 기록 리스트 화면
+        // MainActivity.kt
+        composable("recordList") {
+            RecordListScreen(
+                viewModel = recordListViewModel,
+                onRecordClick = { recordId ->
+                    navController.navigate("recordDetail/$recordId") // 기록 상세 화면으로 이동
+                }
+            )
         }
+
 
         // 기록 입력 화면
         composable("recordInput") {
-            RecordScreen(viewModel = recordViewModel)
+            RecordScreen(
+                viewModel = recordViewModel,
+                onNavigateToRecordList = {
+                    navController.navigate("recordList") {
+                        popUpTo("recordInput") { inclusive = true }
+                    }
+                }
+            )
         }
+
     }
 }

@@ -18,10 +18,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import com.example.hatethis.viewmodel.RecordViewModel
+import com.example.hatethis.viewmodel.UploadStatus
 import kotlinx.coroutines.launch
 
 @Composable
-fun RecordScreen(viewModel: RecordViewModel) {
+fun RecordScreen(viewModel: RecordViewModel, onNavigateToRecordList: () -> Unit) {
     val state by viewModel.uiState.collectAsState()
     val coroutineScope = rememberCoroutineScope()
 
@@ -31,7 +32,6 @@ fun RecordScreen(viewModel: RecordViewModel) {
             .padding(16.dp),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        // 사진 업로드 섹션
         PhotoUpload(
             photoUrl = state.photoUrl,
             onPhotoSelected = { uri -> viewModel.onPhotoSelected(uri) }
@@ -39,7 +39,6 @@ fun RecordScreen(viewModel: RecordViewModel) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 텍스트 입력 섹션
         TextInput(
             text = state.text,
             onTextChange = { newText -> viewModel.onTextChanged(newText) }
@@ -47,7 +46,6 @@ fun RecordScreen(viewModel: RecordViewModel) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 감정 선택 섹션
         EmotionSelector(
             selectedEmotion = state.emotion,
             onEmotionSelected = { emotion -> viewModel.onEmotionSelected(emotion) }
@@ -55,7 +53,6 @@ fun RecordScreen(viewModel: RecordViewModel) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 저장 버튼
         SaveButton(
             onSaveClick = {
                 coroutineScope.launch {
@@ -64,17 +61,55 @@ fun RecordScreen(viewModel: RecordViewModel) {
             }
         )
 
-        // 저장 상태 표시
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 저장 성공 여부에 따라 네비게이션
         if (state.isSaved) {
+            LaunchedEffect(state.isSaved) {
+                onNavigateToRecordList() // 저장 성공 시 기록 목록으로 이동
+            }
+        }
+
+        state.errorMessage?.let { error ->
             Text(
-                text = "Record Saved!",
-                color = MaterialTheme.colorScheme.primary,
+                text = error,
+                color = MaterialTheme.colorScheme.error,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             )
         }
+
+        when (state.uploadStatus) {
+            UploadStatus.UPLOADING -> {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                Text(
+                    text = "Uploading...",
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+            }
+            UploadStatus.SUCCESS -> {
+                Text(
+                    text = "Upload Successful!",
+                    color = MaterialTheme.colorScheme.primary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+            }
+            UploadStatus.FAILURE -> {
+                Text(
+                    text = "Upload Failed: ${state.errorMessage ?: "Unknown Error"}",
+                    color = Color.Red,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+            }
+            else -> {}
+        }
     }
 }
+
+
 
 @Composable
 fun PhotoUpload(photoUrl: String?, onPhotoSelected: (Uri) -> Unit) {
@@ -144,4 +179,3 @@ fun SaveButton(onSaveClick: () -> Unit) {
         Text("Save")
     }
 }
-

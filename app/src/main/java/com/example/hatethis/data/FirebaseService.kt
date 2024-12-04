@@ -1,15 +1,76 @@
 package com.example.hatethis.data
 
 import android.net.Uri
+import com.example.hatethis.model.DateRecord
+import com.example.hatethis.model.EmotionStatus
+import com.example.hatethis.model.MissionStatus
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import java.util.UUID
 
 class FirebaseService {
     private val storageReference: StorageReference by lazy {
         FirebaseStorage.getInstance().reference
     }
+
+    private val realtimeDatabase: DatabaseReference by lazy {
+        FirebaseDatabase.getInstance().reference
+    }
+
+
+    /**
+     * Realtime Database에 기록 저장
+     * @param recordMap Map<String, Any> 객체
+     * @param recordId 기록의 고유 ID
+     */
+    suspend fun saveRecordToRealtimeDatabase(recordMap: Map<String, Any?>, recordId: String) {
+        try {
+            // `comments` 필드가 추가된 데이터 구조로 저장
+            realtimeDatabase.child("records").child(recordId).setValue(recordMap).await()
+        } catch (e: Exception) {
+            throw IllegalStateException("Realtime Database 기록 저장 실패: ${e.message}", e)
+        }
+    }
+
+
+    /**
+     * Realtime Database에서 기록 가져오기
+     * @return 기록의 리스트
+     */
+    suspend fun getRecordsFromRealtimeDatabase(): List<DateRecord> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val snapshot = realtimeDatabase.child("records").get().await()
+                snapshot.children.mapNotNull { child ->
+                    val record = child.value as? Map<*, *> ?: return@mapNotNull null
+                    DateRecord(
+                        recordId = record["recordId"] as? String ?: "",
+                        partnerA = record["partnerA"] as? String ?: "",
+                        partnerB = record["partnerB"] as? String ?: "",
+                        missionStatus = (record["missionStatus"] as? String)?.let {
+                            MissionStatus.valueOf(it) // 문자열을 MissionStatus로 변환
+                        } ?: MissionStatus.NOT_STARTED,
+                        emotion = (record["emotion"] as? String)?.let {
+                            EmotionStatus.valueOf(it) // 문자열을 EmotionStatus로 변환
+                        },
+                        photoUrls = record["photoUrls"] as? List<String> ?: emptyList(),
+                        comments = record["comments"] as? List<String> ?: emptyList(),
+                        createdAt = record["createdAt"] as? Long ?: 0L,
+                        updatedAt = record["updatedAt"] as? Long ?: 0L
+                    )
+                }
+            } catch (e: Exception) {
+                throw IllegalStateException("Realtime Database 기록 가져오기 실패: ${e.message}", e)
+            }
+        }
+    }
+
+
 
     /**
      * 사진 업로드
@@ -21,14 +82,9 @@ class FirebaseService {
         require(folderPath.isNotBlank()) { "폴더 경로는 비어 있을 수 없습니다." }
 
         try {
-            // 고유 파일 이름 생성
             val fileName = UUID.randomUUID().toString()
             val fileReference = storageReference.child("$folderPath/$fileName")
-
-            // Firebase Storage에 파일 업로드
             fileReference.putFile(fileUri).await()
-
-            // 업로드된 파일의 다운로드 URL 가져오기
             return fileReference.downloadUrl.await().toString()
         } catch (e: Exception) {
             throw IllegalStateException("사진 업로드 실패: ${e.message}", e)
@@ -41,7 +97,6 @@ class FirebaseService {
      */
     suspend fun deletePhoto(photoUrl: String) {
         try {
-            // Firebase Storage 경로에서 파일 삭제
             val fileReference = FirebaseStorage.getInstance().getReferenceFromUrl(photoUrl)
             fileReference.delete().await()
         } catch (e: Exception) {

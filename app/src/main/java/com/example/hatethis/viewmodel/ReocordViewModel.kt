@@ -4,20 +4,15 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.hatethis.data.DataRepository
-import com.example.hatethis.data.LocalDataStore
 import com.example.hatethis.model.DateRecord
 import com.example.hatethis.model.EmotionStatus
 import com.example.hatethis.model.MissionStatus
-import com.example.hatethis.model.RecordPart
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class RecordViewModel(
-    private val repository: DataRepository,
-    private val localDataStore: LocalDataStore
-) : ViewModel() {
+class RecordViewModel(private val repository: DataRepository) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RecordUiState())
     val uiState: StateFlow<RecordUiState> = _uiState
@@ -37,42 +32,54 @@ class RecordViewModel(
     fun saveRecord() {
         val currentState = _uiState.value
         if (currentState.photoUrl != null && currentState.text.isNotEmpty() && currentState.emotion != null) {
+            _uiState.update { it.copy(uploadStatus = UploadStatus.UPLOADING) }
+
             viewModelScope.launch {
                 try {
-                    // Firebase에 사진 업로드
+                    // Firebase Storage에 사진 업로드
                     val uploadedPhotoUrl = repository.uploadPhotoToFirebase(Uri.parse(currentState.photoUrl))
 
-                    // DateRecord 객체 생성
+                    // 새로운 DateRecord 객체 생성
                     val newRecord = DateRecord(
                         recordId = System.currentTimeMillis().toString(),
-                        partnerA = RecordPart(
-                            text = currentState.text,
-                            photoUrls = listOf(uploadedPhotoUrl),
-                            isComplete = true
-                        ),
-                        partnerB = RecordPart(text = "", photoUrls = emptyList(), isComplete = false),
+                        partnerA = currentState.text, // 파트너 A의 ID
+                        partnerB = "", // 파트너 B의 ID는 빈 값으로 설정
                         missionStatus = MissionStatus.COMPLETED,
-                        emotion = EmotionStatus.valueOf(currentState.emotion),
+                        emotion = currentState.emotion.let { EmotionStatus.valueOf(it) },
+                        photoUrls = listOf(uploadedPhotoUrl),
+                        comments = emptyList(), // 초기에는 댓글이 없음
                         createdAt = System.currentTimeMillis(),
                         updatedAt = System.currentTimeMillis()
                     )
 
-                    // LocalDataStore에 저장
-                    localDataStore.saveRecord(repository.dateRecordToEntity(newRecord))
-
-                    // UI 상태 초기화 및 저장 완료 플래그 업데이트
-                    _uiState.update { it.copy(isSaved = true, photoUrl = null, text = "", emotion = null) }
+                    // Realtime Database에 기록 저장
+                    repository.saveRecordToRealtimeDatabase(newRecord)
+                    _uiState.update { RecordUiState(isSaved = true, uploadStatus = UploadStatus.SUCCESS) }
                 } catch (e: Exception) {
-                    e.printStackTrace() // 로그로 오류 확인
+                    e.printStackTrace()
+                    _uiState.update {
+                        it.copy(
+                            errorMessage = "Failed to save record.",
+                            uploadStatus = UploadStatus.FAILURE
+                        )
+                    }
                 }
             }
+        } else {
+            _uiState.update { it.copy(errorMessage = "All fields must be filled.") }
         }
     }
+}
+
+enum class UploadStatus {
+    IDLE, UPLOADING, SUCCESS, FAILURE
 }
 
 data class RecordUiState(
     val photoUrl: String? = null,
     val text: String = "",
     val emotion: String? = null,
-    val isSaved: Boolean = false
+    val isSaved: Boolean = false,
+    val errorMessage: String? = null,
+    val uploadStatus: UploadStatus = UploadStatus.IDLE // 업로드 상태
 )

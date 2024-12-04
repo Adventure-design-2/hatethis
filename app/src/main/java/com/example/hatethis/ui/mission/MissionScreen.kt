@@ -19,8 +19,8 @@ import com.example.hatethis.viewmodel.MissionViewModel
 fun MissionScreen(
     viewModel: MissionViewModel = viewModel(),
     onNavigateToProfile: () -> Unit,
-    onNavigateToRecords: () -> Unit, // 기록 목록 화면으로 이동하는 콜백 추가
-    onNavigateToRecordInput: () -> Unit // 기록 작성 화면으로 이동하는 콜백 추가
+    onNavigateToRecordList: () -> Unit, // 기록 목록 화면으로 이동하는 콜백 이름 변경
+    onNavigateToRecordInput: () -> Unit // 기록 작성 화면으로 이동하는 콜백
 ) {
     val missions = viewModel.missions.collectAsState()
 
@@ -34,32 +34,31 @@ fun MissionScreen(
             .fillMaxSize()
             .padding(16.dp)
     ) {
+        // 상단 버튼 행
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // 기록 목록 화면으로 이동하는 버튼
-            Button(onClick = onNavigateToRecords) {
+            Button(onClick = onNavigateToRecordList) { // 기록 목록 화면으로 이동
                 Text(text = "기록 목록 보기")
             }
 
-            // 프로필 화면으로 이동하는 버튼
             Button(onClick = onNavigateToProfile) {
                 Text(text = "프로필로 이동")
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 기록 작성 화면으로 이동하는 버튼
+        // 기록 작성 버튼
         Button(
             onClick = onNavigateToRecordInput,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
         ) {
             Text(text = "기록 작성하기")
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
 
         Text(
             text = "미션 목록",

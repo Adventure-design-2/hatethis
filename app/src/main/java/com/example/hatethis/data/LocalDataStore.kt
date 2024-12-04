@@ -12,6 +12,8 @@ data class DateRecordEntity(
     val partnerB: String,
     val missionStatus: String,
     val emotion: String?,
+    val photoUrls: String, // List<String>을 String으로 저장 (CSV 형식)
+    val comments: String,  // List<String>을 String으로 저장 (CSV 형식)
     val createdAt: Long,
     val updatedAt: Long
 )
@@ -73,4 +75,8 @@ class LocalDataStore(context: Context) {
             database.dateRecordDao().getRecordById(recordId)
         }
     }
+
+    // Helper methods to convert between List<String> and String (CSV format)
+    fun List<String>.toCsv(): String = joinToString(",")
+    fun String.toList(): List<String> = split(",").filter { it.isNotBlank() }
 }
