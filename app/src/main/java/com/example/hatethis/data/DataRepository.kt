@@ -76,84 +76,63 @@ class DataRepository(
         }
     }
 
-    // 로컬 기록 관리
-    suspend fun saveRecordToLocal(dateRecord: DateRecord) {
-        withContext(Dispatchers.IO) {
-            localDataStore.saveRecord(dateRecordToEntity(dateRecord))
-        }
-    }
-
-    suspend fun getAllLocalRecords(): List<DateRecord> {
-        return withContext(Dispatchers.IO) {
-            localDataStore.getAllRecords().map { entityToDateRecord(it) }
-        }
-    }
-
-    // 서버에서 미션 가져오기
+    // 삭제된 코드: Firestore에서 미션 가져오기
+    /*
     suspend fun fetchMissionsFromServer(): List<Mission> {
-        return withContext(Dispatchers.IO) {
-            try {
-                val snapshot = firebaseService.getMissionsFromFirestore()
-                snapshot.mapNotNull { rawMission ->
-                    val missionMap = rawMission as? Map<String, Any> ?: return@mapNotNull null
-                    Mission(
-                        title = missionMap["title"] as? String ?: "",
-                        environment = (missionMap["environment"] as? Long)?.toInt() ?: 0,
-                        locationTag = (missionMap["locationTag"] as? List<*>)?.mapNotNull { it as? String }
-                            ?: emptyList(),
-                        detail = missionMap["detail"] as? String ?: ""
-                    )
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                emptyList()
+        // Firebase에서 미션 데이터를 가져오는 기능은 삭제됨
+        // 이유: 미션은 서버에서 동적으로 가져오지 않고, 앱 다운로드 시 로컬 저장소에 저장되므로 필요 없음
+        return withContext(Dispatchers.IO) { emptyList() }
+    }
+    */
+
+    // 삭제된 코드: 로컬 미션 업데이트
+    /*
+    suspend fun updateLocalMissions(missions: List<Mission>) {
+        // 이 함수는 외부에서 동적으로 미션 데이터를 업데이트할 필요가 없으므로 삭제
+        // 이유: 모든 미션은 초기 설치 시 저장되며, 앱 내에서 상태만 변경됨
+    }
+    */
+
+    // 기본 미션 데이터 삽입
+    suspend fun initializeMissionsIfNeeded(defaultMissions: List<Mission>) {
+        withContext(Dispatchers.IO) {
+            val existingMissions = localDataStore.getAllMissions()
+            if (existingMissions.isEmpty()) {
+                // 기본 미션 데이터를 로컬 저장소에 저장
+                localDataStore.saveMissions(defaultMissions.map { missionToEntity(it) })
+                println("Default missions initialized.")
             }
         }
     }
 
-    // 로컬 미션 업데이트
-    suspend fun updateLocalMissions(missions: List<Mission>) {
-        withContext(Dispatchers.IO) {
-            localDataStore.saveMissions(missions.map { missionToEntity(it) })
-        }
+    // 추천 알고리즘
+    fun getRecommendedMissions(missions: List<Mission>): List<Mission> {
+        return missions.sortedByDescending { mission ->
+            calculateRecommendationScore(mission)
+        }.take(5) // 상위 5개의 미션만 추천
     }
 
-    // 로컬 미션 가져오기
+    // 추천 점수 계산 로직
+    private fun calculateRecommendationScore(mission: Mission): Double {
+        return (mission.environment + 1).toDouble() / (1 + mission.completedCount)
+    }
+
+    // 로컬 미션 데이터 가져오기
     suspend fun getLocalMissions(): List<Mission> {
         return withContext(Dispatchers.IO) {
             localDataStore.getAllMissions().map { entityToMission(it) }
         }
     }
 
+    // 로컬 미션 데이터 업데이트
+    suspend fun updateMission(mission: Mission) {
+        withContext(Dispatchers.IO) {
+            val missionEntity = missionToEntity(mission)
+            localDataStore.updateMission(missionEntity)
+        }
+    }
+
     // 헬퍼 메서드
-    private fun dateRecordToEntity(dateRecord: DateRecord): DateRecordEntity {
-        return DateRecordEntity(
-            recordId = dateRecord.recordId,
-            partnerA = dateRecord.partnerA,
-            partnerB = dateRecord.partnerB,
-            missionStatus = dateRecord.missionStatus.name,
-            emotion = dateRecord.emotion?.name,
-            photoUrls = dateRecord.photoUrls.joinToString(","),
-            comments = dateRecord.comments.joinToString(","),
-            createdAt = dateRecord.createdAt,
-            updatedAt = dateRecord.updatedAt
-        )
-    }
-
-    private fun entityToDateRecord(entity: DateRecordEntity): DateRecord {
-        return DateRecord(
-            recordId = entity.recordId,
-            partnerA = entity.partnerA,
-            partnerB = entity.partnerB,
-            missionStatus = enumValueOf(entity.missionStatus),
-            emotion = entity.emotion?.let { EmotionStatus.valueOf(it) },
-            photoUrls = entity.photoUrls.split(",").filter { it.isNotBlank() },
-            comments = entity.comments.split(",").filter { it.isNotBlank() },
-            createdAt = entity.createdAt,
-            updatedAt = entity.updatedAt
-        )
-    }
-
     private fun missionToEntity(mission: Mission): MissionEntity {
         return MissionEntity(
             title = mission.title,
@@ -171,12 +150,4 @@ class DataRepository(
             detail = entity.detail
         )
     }
-
-    suspend fun updateMission(mission: Mission) {
-        withContext(Dispatchers.IO) {
-            val missionEntity = missionToEntity(mission)
-            localDataStore.updateMission(missionEntity) // 로컬 데이터 업데이트
-        }
-    }
-
 }

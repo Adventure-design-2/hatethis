@@ -6,6 +6,10 @@ import androidx.room.migration.Migration
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.example.hatethis.model.Mission
+import com.google.common.reflect.TypeToken
+import com.google.gson.Gson
+import java.io.InputStreamReader
 
 // DateRecordEntity 정의
 @Entity(tableName = "date_records")
@@ -24,11 +28,31 @@ data class DateRecordEntity(
 // MissionEntity 정의
 @Entity(tableName = "missions")
 data class MissionEntity(
-    @PrimaryKey val title: String,             // 미션 제목 (고유 식별자)
-    val environment: Int,                      // 환경 (숫자 코드)
-    val locationTag: String,                   // 위치 태그 (CSV 형식)
-    val detail: String                         // 미션 상세 설명
-)
+    @PrimaryKey val title: String,
+    val environment: Int,
+    val locationTag: String,
+    val detail: String
+) {
+    fun toDomain(): Mission {
+        return Mission(
+            title = this.title,
+            environment = this.environment,
+            locationTag = this.locationTag.split(",").filter { it.isNotBlank() },
+            detail = this.detail
+        )
+    }
+}
+
+// Mission -> MissionEntity 변환
+fun Mission.toEntity(): MissionEntity {
+    return MissionEntity(
+        title = this.title,
+        environment = this.environment,
+        locationTag = this.locationTag.joinToString(","),
+        detail = this.detail
+    )
+}
+
 
 // DateRecordDao 정의
 @Dao
@@ -110,7 +134,7 @@ abstract class DateRecordDatabase : RoomDatabase() {
 // LocalDataStore 정의
 class LocalDataStore(context: Context) {
     private val database = DateRecordDatabase.getDatabase(context)
-
+    private val context = context.applicationContext
     // DateRecord 관련 함수들
     suspend fun saveRecord(record: DateRecordEntity) {
         withContext(Dispatchers.IO) {
@@ -160,12 +184,41 @@ class LocalDataStore(context: Context) {
             database.missionDao().deleteMission(mission)
         }
     }
+
     suspend fun updateMission(mission: MissionEntity) {
-        withContext(Dispatchers.IO){
+        withContext(Dispatchers.IO) {
             database.missionDao().updateMission(mission)
         }
     }
 
+    // **추가된 함수: 기본 미션 데이터 저장**
+    suspend fun initializeDefaultMissions(defaultMissions: List<MissionEntity>) {
+        withContext(Dispatchers.IO) {
+            val existingMissions = database.missionDao().getAllMissions()
+            if (existingMissions.isEmpty()) {
+                // 로컬 데이터베이스가 비어 있는 경우 기본 미션 저장
+                database.missionDao().insertMissions(defaultMissions)
+                println("Default missions initialized.") // 로그 출력
+            }
+        }
+    }
+    // JSON 파일에서 기본 미션 로드
+    suspend fun loadMissionsFromJson() {
+        withContext(Dispatchers.IO) {
+            try {
+                val inputStream = context.resources.openRawResource("mission.json") // raw 디렉토리 내의 mission.json
+                val reader = InputStreamReader(inputStream)
+                val missionListType = object : TypeToken<List<Mission>>() {}.type
+                val missions: List<Mission> = Gson().fromJson(reader, missionListType)
+                saveMissions(missions.map { it.toEntity() }) // 로컬 데이터베이스에 저장
+                reader.close()
+                inputStream.close()
+                println("Missions loaded from JSON: $missions")
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
 
     // Helper methods to convert between List<String> and String (CSV format)
     fun List<String>.toCsv(): String = joinToString(",")

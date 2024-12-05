@@ -1,0 +1,16 @@
+[
+  {
+    "title": "산책하기",
+    "environment": 3,
+    "locationTag": ["공원", "자연"],
+    "detail": "가까운 공원에서 산책을 하며 서로의 이야기를 나눠보세요.",
+    "completedCount": 0
+  },
+  {
+    "title": "카페 탐방",
+    "environment": 2,
+    "locationTag": ["카페", "도시"],
+    "detail": "특별한 분위기의 카페를 찾아 데이트를 즐겨보세요.",
+    "completedCount": 0
+  }
+]

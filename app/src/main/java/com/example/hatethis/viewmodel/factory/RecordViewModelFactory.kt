@@ -3,6 +3,7 @@ package com.example.hatethis.viewmodel.factory
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.hatethis.data.DataRepository
+import com.example.hatethis.data.LocalDataStore
 import com.example.hatethis.viewmodel.AuthViewModel
 import com.example.hatethis.viewmodel.MissionRecommendationViewModel
 import com.example.hatethis.viewmodel.RecordListViewModel
@@ -37,7 +38,7 @@ class RecordListViewModelFactory(
 
 
 class MissionRecommendationViewModelFactory(
-    private val dataRepository: DataRepository
+    private val dataRepository: LocalDataStore
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")

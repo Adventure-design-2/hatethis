@@ -9,6 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.hatethis.model.Mission
@@ -19,13 +20,15 @@ fun MissionScreen(
     viewModel: MissionRecommendationViewModel,
     onNavigateToProfile: () -> Unit,
     onNavigateToRecordList: () -> Unit,
-    onNavigateToRecordInput: () -> Unit
+    onNavigateToRecordInput: () -> Unit,
+    onNavigateToAllMissions: () -> Unit // 전체 미션 화면으로 이동하는 콜백
 ) {
-    val missions = viewModel.recommendedMissions.collectAsState()
+    // 추천된 미션 상태 관찰
+    val missionsWithScores by viewModel.recommendedMissions.collectAsState(initial = emptyList())
 
-    // Firestore에서 미션 로드
+    // 미션 로드 및 추천
     LaunchedEffect(Unit) {
-        viewModel.recommendMissions()
+        viewModel.loadAndRecommendMissions()
     }
 
     Column(
@@ -33,6 +36,7 @@ fun MissionScreen(
             .fillMaxSize()
             .padding(16.dp)
     ) {
+        // 상단 버튼
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -40,44 +44,46 @@ fun MissionScreen(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Button(onClick = onNavigateToRecordList) {
-                Text(text = "기록 목록 보기")
+                Text("기록 목록 보기")
             }
 
             Button(onClick = onNavigateToProfile) {
-                Text(text = "프로필로 이동")
+                Text("프로필로 이동")
+            }
+
+            Button(onClick = onNavigateToAllMissions) { // 전체 미션 화면 버튼
+                Text("전체 미션 보기")
             }
         }
 
+        // 기록 작성 버튼
         Button(
             onClick = onNavigateToRecordInput,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 16.dp)
         ) {
-            Text(text = "기록 작성하기")
+            Text("기록 작성하기")
         }
 
-        Text(
-            text = "추천 미션 목록",
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(missions.value) { mission ->
-                MissionItem(
-                    mission = mission.first,
-                    score = mission.second
-                )
+        // 미션 목록 표시
+        if (missionsWithScores.isEmpty()) {
+            Text("추천된 미션이 없습니다.", modifier = Modifier.padding(16.dp))
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(missionsWithScores) { (mission, score) ->
+                    MissionItem(mission = mission, score = score)
+                }
             }
         }
     }
 }
 
 @Composable
-fun MissionItem(mission: Mission, score: Double) {
+fun MissionItem(mission: Mission, score: Int) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -87,10 +93,10 @@ fun MissionItem(mission: Mission, score: Double) {
             modifier = Modifier.padding(16.dp)
         ) {
             Text(text = "제목: ${mission.title}")
-            Text(text = "환경: ${mission.environment}")
+            Text(text = "환경 점수: ${mission.environment}")
+            Text(text = "추천 점수: $score")
             Text(text = "태그: ${mission.locationTag.joinToString(", ")}")
             Text(text = "설명: ${mission.detail}")
-            Text(text = "추천 점수: ${"%.2f".format(score)}")
         }
     }
 }

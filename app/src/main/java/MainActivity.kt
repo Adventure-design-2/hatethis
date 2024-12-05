@@ -17,6 +17,7 @@ import com.example.hatethis.data.LocalDataStore
 import com.example.hatethis.ui.invite.InviteScreen
 import com.example.hatethis.ui.login.LoginScreen
 import com.example.hatethis.ui.mission.MissionScreen
+import com.example.hatethis.ui.mission.LocalMissionScreen
 import com.example.hatethis.ui.profile.ProfileScreen
 import com.example.hatethis.ui.records.RecordListScreen
 import com.example.hatethis.ui.records.RecordScreen
@@ -44,7 +45,7 @@ class MainActivity : ComponentActivity() {
             val dataRepository = DataRepository(firebaseService, localDataStore)
 
             // MissionRecommendationViewModel 초기화
-            val missionViewModelFactory = MissionRecommendationViewModelFactory(dataRepository)
+            val missionViewModelFactory = MissionRecommendationViewModelFactory(localDataStore)
             val missionViewModel: MissionRecommendationViewModel =
                 ViewModelProvider(this, missionViewModelFactory)[MissionRecommendationViewModel::class.java]
 
@@ -124,7 +125,8 @@ fun AppNavHost(
                 viewModel = missionViewModel,
                 onNavigateToProfile = { navController.navigate("profile") },
                 onNavigateToRecordList = { navController.navigate("recordList") },
-                onNavigateToRecordInput = { navController.navigate("recordInput") }
+                onNavigateToRecordInput = { navController.navigate("recordInput") },
+                onNavigateToAllMissions = { navController.navigate("localMissions") } // 전체 미션 화면으로 이동
             )
         }
 
@@ -164,6 +166,14 @@ fun AppNavHost(
                         popUpTo("recordInput") { inclusive = true }
                     }
                 }
+            )
+        }
+
+        // 로컬 미션 화면 (새로운 화면 추가)
+        composable("localMissions") {
+            LocalMissionScreen(
+                viewModel = missionViewModel,
+                onNavigateBack = { navController.navigateUp() }
             )
         }
     }
