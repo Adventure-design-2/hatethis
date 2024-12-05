@@ -5,5 +5,6 @@ data class Mission(
     val environment: Int,
     val locationTag: List<String>,
     val detail: String,
-    var completedCount: Int = 0 // 완료 횟수 필드 추가
+    var completedCount: Int = 0,
+    val action: String
 )

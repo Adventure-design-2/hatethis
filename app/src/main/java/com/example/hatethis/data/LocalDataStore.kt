@@ -6,6 +6,7 @@ import androidx.room.migration.Migration
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.example.hatethis.R
 import com.example.hatethis.model.Mission
 import com.google.common.reflect.TypeToken
 import com.google.gson.Gson
@@ -31,14 +32,13 @@ data class MissionEntity(
     @PrimaryKey val title: String,
     val environment: Int,
     val locationTag: String,
-    val detail: String
+    val detail: String // JSON 파일에도 이 필드가 포함되어야 합니다.
 ) {
     fun toDomain(): Mission {
         return Mission(
             title = this.title,
             environment = this.environment,
-            locationTag = this.locationTag.split(",").filter { it.isNotBlank() },
-            detail = this.detail
+            locationTag = this.locationTag.split(",").filter { it.isNotBlank() }
         )
     }
 }
@@ -206,7 +206,7 @@ class LocalDataStore(context: Context) {
     suspend fun loadMissionsFromJson() {
         withContext(Dispatchers.IO) {
             try {
-                val inputStream = context.resources.openRawResource("mission.json") // raw 디렉토리 내의 mission.json
+                val inputStream = context.resources.openRawResource(R.raw.mission) // raw 디렉토리 내의 mission.json
                 val reader = InputStreamReader(inputStream)
                 val missionListType = object : TypeToken<List<Mission>>() {}.type
                 val missions: List<Mission> = Gson().fromJson(reader, missionListType)
